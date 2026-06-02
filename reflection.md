@@ -1,97 +1,76 @@
-# Reflection — Design Requests (this session)
+# Reflection — The persistence consultation
 
-A record of the design-, layout-, and styling-related requests made during this
-build session, in the order they came up, with the resulting decision for each.
-(Pure functionality/feature, git, and naming requests are intentionally left out.)
+This document records the one design decision I want to be able to walk a reviewer
+through: **how the app persists documents**, and how that choice was reached in
+consultation with Claude Code.
 
-## 1. Home CTA button + "old paper" palette
-- "Open your workspace" was light-on-light. Make it **black text, round, with a
-  black border and nice shading** that suits the theme.
-- Change the background to an **"old paper" colour — lightly yellowish, like
-  older book pages**, not a plain warm-white.
+## The question I brought to Claude Code
 
-→ Restyled the CTA as a raised, rounded, ink-bordered chip with a layered
-shadow; shifted the whole palette to aged paper tones.
+The brief said the app should run locally with no hosting and "save details to
+localStorage," and the task explicitly asked me to settle the persistence mechanism
+"after the consultation." So rather than just assume it, I asked Claude Code to treat
+persistence as a decision to confirm: given a personal, browser-only document app that
+must survive reloads and have no backend, **what should actually store the data, and
+what are the alternatives I should weigh?**
 
-## 2. Bottom command legend + centered title
-- At the **bottom of the screen, show the main editorial (Markdown) commands**
-  that are supported by the writer.
-- **Center the title** between the editing and preview sides.
+## What Claude Code recommended
 
-→ Added a slim Markdown command legend pinned to the bottom; centered the title
-across both panes.
+Claude Code **recommended `localStorage`** — and framed it as confirming my stated
+preference rather than overriding it. Its reasoning:
 
-## 3. Legend symbol size
-- The command **symbols in the bottom line look a bit small — make them bigger
-  by about 2 font sizes.**
+- The data is small, plain‑text Markdown documents — well within `localStorage`'s budget.
+- The API is **synchronous and simple**, which maps cleanly onto a tiny state layer and is
+  easy to reason about and debug.
+- It **survives full page reloads** with zero infrastructure, matching the "local‑first,
+  no hosting" requirement.
 
-→ Bumped the syntax chips from 11px up to `text-sm` (14px).
+## The alternatives it surfaced
 
-## 4. Separate the two panes; tint them
-- Make the **writing side and preview side clearly separable with borders** that
-  fit the theme — **brownish**.
-- Make the **editable section whiter** and the **preview more yellow, like a page
-  of a book**.
+1. **`localStorage` (chosen).**
+   - *Pros:* dead simple, synchronous, no setup, survives reloads, easy to inspect.
+   - *Cons:* ~5 MB ceiling; stores strings only (so the collection is JSON‑serialised);
+     synchronous writes; scoped per‑browser/per‑device (no cross‑device sync).
 
-→ Introduced distinct write/preview surface colours and a brown divider.
+2. **IndexedDB.**
+   - *Pros:* asynchronous, far larger storage headroom, structured/indexed queries —
+     better if the app grew to many large documents or stored binary attachments.
+   - *Cons:* significantly more boilerplate (transactions, async access, versioned
+     schema upgrades) for capabilities this app does not need.
 
-## 5. Reframe the panes (square sheet + scroll)
-- The writing side still looked too similar to preview — make the **writing
-  background white**.
-- The **dividing line looked awful** — remove it.
-- **Frame the writing side as a square with rounded brown borders.**
-- **Frame the preview as an ancient scroll.**
+3. **A backend / server database.** Surfaced only to be explicitly ruled out: the brief
+   says the app runs locally with no hosting, so anything requiring a server (and the
+   accounts, sync, and deployment that come with it) was out of scope.
 
-→ Made the write surface pure white; replaced the seam with two separate framed
-cards on the paper "desk" — a rounded brown-bordered white sheet, and a parchment
-preview with rolled scroll dowels top and bottom.
+## Why we went with `localStorage`
 
-## 6. Adaptive (fluid) typography
-- Make the **write text and preview text adapt to the page size**, but **never
-  smaller than 6px** as a bare minimum.
+We chose `localStorage` because the **data shape and scale fit it precisely** — a handful
+of small text documents per user — so IndexedDB's extra power would have been complexity
+without benefit, and a server was excluded by the requirements. The synchronous, string
+key/value model also matched the architecture cleanly.
 
-→ Drove both panes' body text from a shared `clamp(6px, 1.6vw, 1.6rem)`; preview
-headings scale from that base via `em`.
+**Trade‑offs we knowingly accepted:**
 
-## 7. Responsive mobile layout
-- **Remove the Write/Preview toggle** on mobile — **stack instead.**
-- **Landscape:** write and preview **side by side**, with the documents bar
-  **extendable via a button named "Documents".**
-- **Portrait:** **preview below, editable text above**, and the **"Documents"
-  panel extendable from above the editor.**
+- The ~5 MB limit and string‑only storage are fine for text; they would *not* be fine if
+  we later added images/attachments — that would be the trigger to revisit IndexedDB.
+- Data is per‑browser and per‑device: there is no sync between machines. Acceptable for a
+  deliberately "personal, local‑first" tool.
+- Synchronous writes could, in theory, block the main thread on very large payloads — a
+  non‑issue at this data size.
 
-→ Removed the toggle; panes follow orientation (portrait stacks, landscape
-side-by-side); the sidebar became a "Documents" drawer that slides from the top
-in portrait and from the left in landscape (desktop keeps the pinned sidebar).
+## How the decision shaped the implementation
 
-## 8. Tag placement & sidebar display (layout aspects)
-- Put the **tag entry below the main editing area**, so the **editing area is
-  slightly smaller than the preview**.
-- Show the **tags in the documents list panel instead of the text preview.**
+- All reads/writes go through one place (`lib/storage.ts`), which **normalises older saved
+  data** so documents written by earlier versions still load (forward‑compatible).
+- The whole collection lives under a single key; on every change it is re‑serialised —
+  this *is* the app's **autosave** (no save button).
+- State is held in a small module store read through React's `useSyncExternalStore`
+  (`lib/documents-store.ts`, `lib/use-documents.ts`), giving one shared source of truth
+  across the sidebar and editor and a clean server/hydration story.
 
-→ Tag bar sits inside the white sheet under the textarea (shrinking it relative
-to the preview); sidebar rows show tag chips in place of the old body snippet.
+## If I had to defend or revisit this
 
-## 9. Tag input microcopy (responsive placeholder)
-- When adding tags, **show "write a tag word and press enter to confirm"** until
-  **there isn't enough room**, then just show **"Add tag".**
-
-→ The tag input measures its own width (ResizeObserver) and swaps between the
-full hint and the short "Add tag" so the text is never clipped.
-
-## 10. Sidebar info layout + trash button
-- Show the **creation date** in each list entry (Name / tags / creation date),
-  later upgraded to **full created date-time plus last-edited date-time side by
-  side.**
-- The **Trash button text should be centered.**
-
-→ Added the timestamps to each entry; centered the Trash button's content.
-
-## 11. Color themes (toggleable)
-- Make the **themes different and toggleable.**
-- Wanted **brown, (white,) and black** themes — black having **white text and
-  icons**, with the **preview window black and a dark-red frame.**
-- Follow-up: **remove the white option — leave only brown and black.**
-
-→ Added a Brown/Black theme switcher (persisted, no flash on load); black theme
-uses white text/icons and a pure-black preview with a dark-red scroll frame.
+The decision is correct for the requirements as written. The clearest signal that it
+should change would be **scope growth**: many/large documents, binary attachments, or a
+need for cross‑device sync. The first two point to **IndexedDB**; the third points to a
+**backend**. Because persistence is funnelled through `lib/storage.ts` and a single store,
+swapping the mechanism later would be a contained change rather than a rewrite.
