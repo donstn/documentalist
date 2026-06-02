@@ -108,3 +108,16 @@ npm run dev
 
 - This is a local‑first app: all data lives in `localStorage`, so it is per‑browser and per‑device.
   There is nothing to deploy and no secrets in the code.
+
+## Theme screenshots (optional task)
+
+The two colour themes, captured from the running app and committed alongside this README
+(`brown_themed.jpg` and `black_themed.jpg`):
+
+**Brown — the default aged‑paper look**
+
+![Brown theme](brown_themed.jpg)
+
+**Black — white text and icons, with a black preview behind a dark‑red frame**
+
+![Black theme](black_themed.jpg)
