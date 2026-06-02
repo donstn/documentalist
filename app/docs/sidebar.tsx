@@ -7,6 +7,7 @@ import { useDocuments } from "@/lib/use-documents";
 import { formatDateTime } from "@/lib/format";
 import { StarIcon } from "./star-icon";
 import { TrashBinIcon } from "./trash-icon";
+import { ThemeToggle } from "./theme-toggle";
 
 const STARRED_PATTERN = /(^|\s)is:starred(\s|$)/;
 
@@ -198,6 +199,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </ul>
         )}
       </nav>
+
+      {/* Theme switcher */}
+      <div className="border-t border-border px-3 py-2.5">
+        <ThemeToggle />
+      </div>
 
       {/* Trash entry — icon fills when the trash has documents. */}
       <div className="border-t border-border px-2 py-2">

@@ -3,7 +3,7 @@
 # Documentalist — a personal, local-only Markdown document manager
 
 Fixed stack (do not swap): Next.js (App Router), TypeScript, Tailwind CSS v4.
-Per AGENTS.md: read the version-matched docs in `node_modules/next/dist/docs/`
+Per AGENTS.md: read the version-matched docs in `node_modules/next/dist/docs/
 before writing Next.js code — this is Next 16, not your training data.
 
 ## Architecture decisions (the "why")
@@ -30,6 +30,14 @@ before writing Next.js code — this is Next 16, not your training data.
   Phone = sidebar is a drawer (the "Documents" button); panes follow orientation
   (portrait stacks write-over-preview, landscape side-by-side). Orientation rules
   are scoped with `max-md` so desktops never accidentally stack.
+- **Theming (brown/black):** colour tokens are defined in a NON-inline
+  `@theme` block so utilities compile to `var(--color-*)`; each theme overrides
+  those vars under `:root[data-theme="…"]` in `globals.css`. The choice +
+  persistence live in `lib/theme.ts` (localStorage, `useSyncExternalStore`); an
+  inline script in `app/layout.tsx` sets `data-theme` before paint (no flash),
+  and `<html suppressHydrationWarning>` covers the script-vs-SSR difference.
+  Do NOT move colours back into `@theme inline` — that hardcodes values and
+  breaks runtime theming.
 
 ## Invariants to preserve
 
