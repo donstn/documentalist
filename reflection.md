@@ -138,4 +138,4 @@ Understanding the assigment. Difficult to learn and then do without consultation
 
 ## 5. What I'd keep or change in my docs/ folder next time (useful vs. noise)
 
-Will read thhough the whole task AND the evaluation part before commiting to the project construction. Now i made a ton of optional tasks but then i understood that (probably) they need to go to a seperate branch
+will probably have to look through the docs file - now just uploaded all that was recommended duering the course so everything would work :)
