@@ -18,6 +18,18 @@ export const metadata: Metadata = {
     "A calm, personal place to write and keep your documents. Markdown, autosave, and instant search.",
 };
 
+// Applies the saved theme to <html> before first paint, so there's no flash of
+// the default theme on load. Kept tiny and inline; mirrors the values in theme.ts.
+const themeInitScript = `
+(function () {
+  try {
+    var t = localStorage.getItem('documentalist:theme');
+    if (t !== 'black') t = 'brown';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,8 +38,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-theme="brown"
+      suppressHydrationWarning
       className={`${inter.variable} ${sourceSerif.variable} h-full`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );
